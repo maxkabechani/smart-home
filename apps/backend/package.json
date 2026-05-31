@@ -1,5 +1,5 @@
 {
-  "name": "temperature-humidity-backend",
+  "name": "backend",
   "version": "1.0.0",
   "description": "Fastify API for the ESP32 temperature and humidity monitor.",
   "type": "module",

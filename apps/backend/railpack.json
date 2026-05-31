@@ -1,11 +1,11 @@
 {
   "install": {
-    "cmds": ["cd apps/backend && pnpm install --frozen-lockfile=false"]
+    "cmds": ["pnpm install --frozen-lockfile=false --filter backend..."]
   },
   "build": {
-    "cmds": ["cd apps/backend && pnpm build"]
+    "cmds": ["pnpm --filter backend build"]
   },
   "start": {
-    "cmd": "cd apps/backend && pnpm start"
+    "cmd": "pnpm --filter backend start"
   }
 }
