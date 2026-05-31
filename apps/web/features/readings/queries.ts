@@ -7,7 +7,7 @@ import { buildReadingsUrl, type ReadingResponse } from "./api";
 const pollIntervalMs = 5000;
 
 async function fetchLatestReading(): Promise<ReadingResponse> {
-  const response = await fetch(buildReadingsUrl("/api/readings/latest"), {
+  const response = await fetch(buildReadingsUrl("/readings/latest"), {
     cache: "no-store",
   });
 

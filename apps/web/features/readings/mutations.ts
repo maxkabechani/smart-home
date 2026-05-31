@@ -9,7 +9,7 @@ import {
 } from "./api";
 
 async function createReading(input: ReadingInput): Promise<ReadingResponse> {
-  const response = await fetch(buildReadingsUrl("/api/readings"), {
+  const response = await fetch(buildReadingsUrl("/readings"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

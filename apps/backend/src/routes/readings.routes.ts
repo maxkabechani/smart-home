@@ -9,7 +9,7 @@ import { env } from "../env.js";
 
 const readingsRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Body: ReadingInput }>(
-    "/api/readings",
+    "/readings",
     {
       schema: {
         body: readingInputSchema,
@@ -30,7 +30,7 @@ const readingsRoutes: FastifyPluginAsync = async (app) => {
   );
 
   app.get(
-    "/api/readings/latest",
+    "/readings/latest",
     {
       schema: {
         response: {

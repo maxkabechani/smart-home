@@ -5,7 +5,7 @@ import { queryKeys } from "../../lib/query-keys";
 import { buildReadingsUrl, type ReadingResponse } from "./api";
 
 export async function getLatestReading(): Promise<ReadingResponse> {
-  const response = await fetch(buildReadingsUrl("/api/readings/latest"), {
+  const response = await fetch(buildReadingsUrl("/readings/latest"), {
     cache: "no-store",
   });
 

@@ -9,7 +9,7 @@ const char* WIFI_SSID = "ODIN";
 const char* WIFI_PASSWORD = "TheForce";
 
 // Update this once you know the backend IP and port.
-const char* API_URL = "http://192.168.8.140:4000/api/readings";
+const char* API_URL = "https://api.temp.maxkabechani.dev/readings";
 
 const unsigned long READ_INTERVAL_MS = 5000;
 unsigned long lastReadAt = 0;
