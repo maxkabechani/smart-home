@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f4ef;
+  --foreground: #141414;
+  --surface: #ffffff;
+  --surface-muted: #f0ebe5;
+  --ink-soft: #6b6b6b;
+  --accent: #ff5b2e;
+  --accent-muted: #ffd1c2;
+  --shadow: 0 30px 80px rgba(18, 18, 18, 0.12);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Palatino", "Book Antiqua", serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.bg-grid {
+  background-image:
+    radial-gradient(circle at top left, rgba(255, 91, 46, 0.12), transparent 45%),
+    radial-gradient(circle at 20% 80%, rgba(20, 20, 20, 0.08), transparent 35%),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.9), rgba(247, 244, 239, 0.95)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(20, 20, 20, 0.04),
+      rgba(20, 20, 20, 0.04) 1px,
+      transparent 1px,
+      transparent 40px
+    );
+  background-size: cover;
+}
+
+.glass-panel {
+  border-radius: 32px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.82);
+  padding: 32px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
+}
+
+.metric-card {
+  border-radius: 24px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: var(--surface);
+  padding: 24px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+}
+
+.stack-panel {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+
+.shadow-glow {
+  box-shadow: 0 12px 30px rgba(255, 91, 46, 0.28);
+}
+
+.shadow-soft {
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
