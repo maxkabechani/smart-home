@@ -1,3 +1,11 @@
 {
-  "rootDir": "../.."
+  "install": {
+    "cmds": ["cd apps/backend && pnpm install --frozen-lockfile=false"]
+  },
+  "build": {
+    "cmds": ["cd apps/backend && pnpm build"]
+  },
+  "start": {
+    "cmd": "cd apps/backend && pnpm start"
+  }
 }
