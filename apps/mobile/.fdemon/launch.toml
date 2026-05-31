@@ -1,0 +1,22 @@
+# Flutter Demon Launch Configurations
+# Shared app launch profiles. User-specific device choices are stored in settings.local.toml.
+
+[[configurations]]
+name = "Development"
+device = "auto"
+mode = "debug"
+entry_point = "lib/main.dart"
+auto_start = false
+
+[configurations.dart_defines]
+API_BASE_URL = "http://10.0.2.2:4000"
+
+[[configurations]]
+name = "Production"
+device = "auto"
+mode = "release"
+entry_point = "lib/main.dart"
+auto_start = false
+
+[configurations.dart_defines]
+API_BASE_URL = "https://api.temp.maxkabechani.dev"

@@ -12,6 +12,7 @@ const String apiBaseUrl = String.fromEnvironment(
 const Duration pollInterval = Duration(seconds: 5);
 
 void main() {
+  debugPrint('API base URL: $apiBaseUrl');
   runApp(const SensorDashboardApp());
 }
 
@@ -62,7 +63,7 @@ class Reading {
     return Reading(
       temperature: (json['temperature'] as num).toDouble(),
       humidity: (json['humidity'] as num).toDouble(),
-      status: json['status'] as String? ?? 'offline',
+      status: json['status'] as String? ?? 'Offline',
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
@@ -109,9 +110,7 @@ class _DashboardPageState extends State<DashboardPage> {
     try {
       setState(() => _errorMessage = null);
 
-      final response = await http.get(
-        Uri.parse('$apiBaseUrl/readings/latest'),
-      );
+      final response = await http.get(Uri.parse('$apiBaseUrl/readings/latest'));
 
       if (response.statusCode != 200) {
         throw Exception('Backend responded with ${response.statusCode}');
@@ -183,7 +182,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 children: [
                   _InfoTile(
                     label: 'Device status',
-                    value: _reading?.status ?? 'offline',
+                    value: _reading?.status ?? 'Offline',
                   ),
                   _InfoTile(
                     label: 'Recorded at',
@@ -218,22 +217,6 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            color: const Color(0xFF2563EB),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF2563EB).withValues(alpha: 0.24),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: const Icon(Icons.sensors_rounded, color: Colors.white),
-        ),
         const SizedBox(width: 12),
         const Expanded(
           child: Column(
@@ -275,7 +258,7 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _HeroStatusCard extends StatelessWidget {
+class _HeroStatusCard extends StatefulWidget {
   const _HeroStatusCard({
     required this.reading,
     required this.statusMessage,
@@ -289,21 +272,50 @@ class _HeroStatusCard extends StatelessWidget {
   final DateTime? lastUpdated;
 
   @override
+  State<_HeroStatusCard> createState() => _HeroStatusCardState();
+}
+
+class _HeroStatusCardState extends State<_HeroStatusCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat();
+    _pulseAnimation = CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final statusColor = widget.isOnline
+        ? const Color(0xFF16A34A)
+        : const Color(0xFFDC2626);
+
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0F172A), Color(0xFF1E3A8A)],
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E3A8A).withValues(alpha: 0.22),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -312,38 +324,83 @@ class _HeroStatusCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              _StatusPill(isOnline: isOnline, label: statusMessage),
-              const Spacer(),
-              const Icon(Icons.wifi_tethering_rounded, color: Colors.white70),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.statusMessage,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Temperature & Humidity',
+                      style: TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (context, child) {
+                  final scale = 1 + (_pulseAnimation.value * 0.5);
+                  final glowOpacity = 0.3 * (1 - _pulseAnimation.value);
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Transform.scale(
+                        scale: scale,
+                        child: Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: glowOpacity),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      child!,
+                    ],
+                  );
+                },
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 26),
-          const Text(
-            'Temperature & Humidity',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              height: 1.05,
-            ),
-          ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'Live data from the ESP32 sensor board.',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.72),
-              fontSize: 14,
+              color: Color(0xFF64748B),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
                 child: _MiniReading(
                   icon: Icons.thermostat_rounded,
                   label: 'Temp',
-                  value: reading != null
-                      ? '${reading!.temperature.toStringAsFixed(1)}°C'
+                  value: widget.reading != null
+                      ? '${widget.reading!.temperature.toStringAsFixed(1)}°C'
                       : '--',
                 ),
               ),
@@ -352,63 +409,20 @@ class _HeroStatusCard extends StatelessWidget {
                 child: _MiniReading(
                   icon: Icons.water_drop_rounded,
                   label: 'Humidity',
-                  value: reading != null
-                      ? '${reading!.humidity.toStringAsFixed(0)}%'
+                  value: widget.reading != null
+                      ? '${widget.reading!.humidity.toStringAsFixed(0)}%'
                       : '--',
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Text(
-            'Last updated: ${lastUpdated != null ? _formatTime(lastUpdated!) : '-'}',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.64),
+            'Last updated: ${widget.lastUpdated != null ? _formatTime(widget.lastUpdated!) : '-'}',
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
               fontSize: 12,
               fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.isOnline, required this.label});
-
-  final bool isOnline;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: isOnline
-                  ? const Color(0xFF22C55E)
-                  : const Color(0xFFEF4444),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -433,19 +447,19 @@ class _MiniReading extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.white70, size: 20),
+          Icon(icon, color: const Color(0xFF2563EB), size: 20),
           const SizedBox(height: 10),
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.68),
+              color: const Color(0xFF64748B),
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -454,7 +468,7 @@ class _MiniReading extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              color: Colors.white,
+              color: Color(0xFF0F172A),
               fontSize: 22,
               fontWeight: FontWeight.w800,
             ),
@@ -597,7 +611,6 @@ class _MetricCard extends StatelessWidget {
                 child: Text(
                   unit,
                   style: const TextStyle(
-                    color: Color(0xFF64748B),
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                   ),
@@ -611,6 +624,7 @@ class _MetricCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 8,
+              color: const Color(0xFF2563EB),
               backgroundColor: const Color(0xFFE2E8F0),
             ),
           ),
@@ -734,6 +748,8 @@ class _InfoTile extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Color(0xFF0F172A),
                 fontWeight: FontWeight.w700,

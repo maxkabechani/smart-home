@@ -3,7 +3,8 @@ import { getQueryClient } from "./get-query-client";
 import { prefetchLatestReading } from "../features/readings/actions";
 import ReadingsDashboard from "../features/readings/readings-dashboard";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://temp.maxkabechani.dev";
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://temp.maxkabechani.dev";
 
 export default async function Home() {
   const queryClient = getQueryClient();

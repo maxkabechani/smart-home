@@ -3,23 +3,24 @@
 
 [behavior]
 confirm_quit = true     # Ask before quitting with running apps
+auto_launch = false
+version_check = false
 
 [watcher]
 paths = ["lib"]
-debounce_ms = 500
+debounce_ms = 750
 auto_reload = true
 extensions = ["dart"]
 
 [ui]
-log_buffer_size = 10000
+log_buffer_size = 15000
 show_timestamps = true
 compact_logs = false
 theme = "default"
 stack_trace_collapsed = true
 stack_trace_max_frames = 3
-# Icon style: "nerd_fonts" (default) or "unicode"
-# Set to "unicode" if your terminal does not have a Nerd Font installed
-icons = "nerd_fonts"
+enable_mouse = true
+icons = "unicode"
 
 [devtools]
 auto_open = false
@@ -49,6 +50,14 @@ command = ""
 # Pattern for opening file at line/column
 # Variables: $EDITOR, $FILE, $LINE, $COLUMN
 open_pattern = "$EDITOR $FILE:$LINE"
+
+[dap]
+enabled = false
+auto_start_in_ide = true
+port = 4711
+bind_address = "127.0.0.1"
+suppress_reload_on_pause = true
+auto_configure_ide = true
 
 # [flutter]
 # Explicit Flutter SDK path override (highest priority in detection chain).

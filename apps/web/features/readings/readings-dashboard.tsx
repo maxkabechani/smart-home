@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useLatestReadingQuery } from "./queries";
 
 export default function ReadingsDashboard() {
@@ -21,21 +21,13 @@ export default function ReadingsDashboard() {
     setIsRefreshing(false);
   }, [refetch]);
 
-  const formattedTime = useMemo(() => {
-    if (!reading?.createdAt) {
-      return "-";
-    }
+  const formattedTime = reading?.createdAt
+    ? new Date(reading.createdAt).toLocaleString()
+    : "-";
 
-    return new Date(reading.createdAt).toLocaleString();
-  }, [reading?.createdAt]);
-
-  const lastUpdatedTime = useMemo(() => {
-    if (!dataUpdatedAt) {
-      return "-";
-    }
-
-    return new Date(dataUpdatedAt).toLocaleTimeString();
-  }, [dataUpdatedAt]);
+  const lastUpdatedTime = dataUpdatedAt
+    ? new Date(dataUpdatedAt).toLocaleTimeString()
+    : "-";
 
   const errorMessage = error ? "Unable to reach the backend." : null;
 
@@ -53,7 +45,7 @@ export default function ReadingsDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-3 text-sm text-slate-600">
-          <span className="min-w-[190px] rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-center text-xs uppercase tracking-wide">
+          <span className="min-w-47.5 rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-center text-xs uppercase tracking-wide">
             {isLoading ? "Loading sensor data..." : statusMessage}
           </span>
           <span className="hidden text-xs text-slate-500 sm:inline">
@@ -80,7 +72,7 @@ export default function ReadingsDashboard() {
                 </p>
               </div>
               <button
-                className="min-w-[120px] rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                className="min-w-30 rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white"
                 onClick={handleRefresh}
                 type="button"
                 aria-busy={isRefreshing || isLoading}
