@@ -110,7 +110,7 @@ class _DashboardPageState extends State<DashboardPage> {
       setState(() => _errorMessage = null);
 
       final response = await http.get(
-        Uri.parse('$apiBaseUrl/api/readings/latest'),
+        Uri.parse('$apiBaseUrl/readings/latest'),
       );
 
       if (response.statusCode != 200) {

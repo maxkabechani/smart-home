@@ -52,8 +52,8 @@ Mobile:
 
 ## API endpoints
 
-- GET /api/readings/latest
-- POST /api/readings
+- GET /readings/latest
+- POST /readings
 
 ## ESP32
 
