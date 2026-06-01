@@ -48,7 +48,7 @@ body {
   border-radius: 32px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   background: rgba(255, 255, 255, 0.82);
-  padding: 32px;
+  padding: 20px;
   box-shadow: var(--shadow);
   backdrop-filter: blur(8px);
 }
@@ -57,13 +57,13 @@ body {
   border-radius: 24px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   background: var(--surface);
-  padding: 24px;
+  padding: 20px;
   box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
 }
 
 .stack-panel {
   display: grid;
-  gap: 20px;
+  gap: 16px;
   align-content: start;
 }
 
@@ -73,4 +73,18 @@ body {
 
 .shadow-soft {
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+
+@media (min-width: 640px) {
+  .glass-panel {
+    padding: 32px;
+  }
+
+  .metric-card {
+    padding: 24px;
+  }
+
+  .stack-panel {
+    gap: 20px;
+  }
 }
