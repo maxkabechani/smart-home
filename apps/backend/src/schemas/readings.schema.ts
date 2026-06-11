@@ -24,3 +24,8 @@ export const readingResponseSchema = Type.Object({
   message: Type.Optional(Type.String()),
   data: Type.Union([readingSchema, Type.Null()]),
 });
+
+export const readingsHistoryResponseSchema = Type.Object({
+  success: Type.Literal(true),
+  data: Type.Array(readingSchema),
+});

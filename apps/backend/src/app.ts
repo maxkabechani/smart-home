@@ -2,6 +2,7 @@ import cors from "@fastify/cors";
 import type { FastifyError } from "fastify";
 import fastify from "fastify";
 import { initializeDatabase } from "./db/client.js";
+import bulbRoutes from "./routes/bulb.routes.js";
 import readingsRoutes from "./routes/readings.routes.js";
 
 export async function buildApp() {
@@ -32,7 +33,7 @@ export async function buildApp() {
     if (error.validation) {
       return reply.status(400).send({
         success: false,
-        message: "Invalid sensor reading",
+        message: "Invalid request payload",
       });
     }
 
@@ -50,6 +51,7 @@ export async function buildApp() {
   });
 
   app.register(readingsRoutes);
+  app.register(bulbRoutes);
 
   return app;
 }
