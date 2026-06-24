@@ -79,6 +79,16 @@ const bulbRoutes: FastifyPluginAsync = async (app) => {
       const allowedUids = getAllowedRfidUids();
       const isAllowed = allowedUids.size === 0 || allowedUids.has(uid);
 
+      request.log.info(
+        {
+          allowedRfidUids: [...allowedUids],
+          scannedRfidUid: uid,
+          rfidComparison:
+            allowedUids.size === 0 ? "allowed_by_empty_allowlist" : isAllowed,
+        },
+        "RFID scan comparison",
+      );
+
       return {
         success: true,
         data: await recordRfidScan(uid, isAllowed),
