@@ -1,10 +1,30 @@
 import type { FastifyPluginAsync } from "fastify";
-import { getBulbState, setBulbState } from "../db/bulb.repository.js";
+import {
+  getBulbState,
+  recordRfidScan,
+  requestBulbOn,
+  switchBulbOff,
+} from "../db/bulb.repository.js";
 import {
   bulbInputSchema,
   bulbResponseSchema,
+  rfidScanInputSchema,
   type BulbInput,
+  type RfidScanInput,
 } from "../schemas/bulb.schema.js";
+
+function normalizeUid(uid: string) {
+  return uid.replace(/[^a-fA-F0-9]/g, "").toUpperCase();
+}
+
+function getAllowedRfidUids() {
+  return new Set(
+    (process.env.ALLOWED_RFID_UIDS ?? "")
+      .split(",")
+      .map((uid) => normalizeUid(uid))
+      .filter(Boolean),
+  );
+}
 
 const bulbRoutes: FastifyPluginAsync = async (app) => {
   app.get(
@@ -37,7 +57,31 @@ const bulbRoutes: FastifyPluginAsync = async (app) => {
     async (request) => {
       return {
         success: true,
-        data: await setBulbState(request.body.enabled),
+        data: request.body.enabled
+          ? await requestBulbOn()
+          : await switchBulbOff(),
+      };
+    },
+  );
+
+  app.post<{ Body: RfidScanInput }>(
+    "/bulb/rfid-scan",
+    {
+      schema: {
+        body: rfidScanInputSchema,
+        response: {
+          200: bulbResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const uid = normalizeUid(request.body.uid);
+      const allowedUids = getAllowedRfidUids();
+      const isAllowed = allowedUids.size === 0 || allowedUids.has(uid);
+
+      return {
+        success: true,
+        data: await recordRfidScan(uid, isAllowed),
       };
     },
   );

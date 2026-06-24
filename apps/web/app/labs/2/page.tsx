@@ -12,13 +12,21 @@ import {
 } from "@/components/ui/card"
 import { useSetBulbStateMutation } from "@/features/bulb/mutations"
 import { useBulbStateQuery } from "@/features/bulb/queries"
-import { LightbulbIcon, ServerIcon } from "lucide-react"
+import { IdCardIcon, LightbulbIcon, ServerIcon } from "lucide-react"
 
 export default function LabTwoPage() {
   const bulbQuery = useBulbStateQuery()
   const setBulbMutation = useSetBulbStateMutation()
   const isBulbOn = bulbQuery.data?.data.enabled ?? false
+  const isWaitingForRfid = bulbQuery.data?.data.pendingRfid ?? false
+  const lastRfidUid = bulbQuery.data?.data.lastRfidUid
+  const lastRfidStatus = bulbQuery.data?.data.lastRfidStatus
   const updatedAt = bulbQuery.data?.data.updatedAt
+  const stateLabel = isBulbOn
+    ? "Bulb on"
+    : isWaitingForRfid
+      ? "Waiting for RFID"
+      : "Bulb off"
 
   return (
     <LabShell>
@@ -34,7 +42,7 @@ export default function LabTwoPage() {
               </h1>
             </div>
             <Badge variant={isBulbOn ? "default" : "outline"}>
-              {isBulbOn ? "Bulb on" : "Bulb off"}
+              {stateLabel}
             </Badge>
           </div>
         </div>
@@ -51,6 +59,8 @@ export default function LabTwoPage() {
                   "flex size-28 shrink-0 items-center justify-center rounded-full border",
                   isBulbOn
                     ? "border-amber-300 bg-amber-200 text-amber-950 shadow-[0_0_44px_rgba(251,191,36,0.55)]"
+                    : isWaitingForRfid
+                      ? "border-foreground bg-muted text-foreground"
                     : "border-muted bg-muted text-muted-foreground",
                 ].join(" ")}
               >
@@ -59,13 +69,18 @@ export default function LabTwoPage() {
               <div className="grid flex-1 gap-3">
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    disabled={setBulbMutation.isPending || isBulbOn}
+                    disabled={
+                      setBulbMutation.isPending || isBulbOn || isWaitingForRfid
+                    }
                     onClick={() => setBulbMutation.mutate(true)}
                   >
-                    Switch On
+                    Request On
                   </Button>
                   <Button
-                    disabled={setBulbMutation.isPending || !isBulbOn}
+                    disabled={
+                      setBulbMutation.isPending ||
+                      (!isBulbOn && !isWaitingForRfid)
+                    }
                     onClick={() => setBulbMutation.mutate(false)}
                     variant="outline"
                   >
@@ -75,7 +90,18 @@ export default function LabTwoPage() {
                 <StatusLine
                   icon={<LightbulbIcon className="size-4" />}
                   label="Current state"
-                  value={isBulbOn ? "on" : "off"}
+                  value={
+                    isBulbOn ? "on" : isWaitingForRfid ? "waiting" : "off"
+                  }
+                />
+                <StatusLine
+                  icon={<IdCardIcon className="size-4" />}
+                  label="RFID scan"
+                  value={
+                    lastRfidUid
+                      ? `${lastRfidStatus ?? "seen"} ${lastRfidUid}`
+                      : "none"
+                  }
                 />
                 <StatusLine
                   icon={<ServerIcon className="size-4" />}
@@ -89,19 +115,19 @@ export default function LabTwoPage() {
           <Card>
             <CardHeader>
               <CardDescription>Lab control</CardDescription>
-              <CardTitle>Backend-driven switch</CardTitle>
+              <CardTitle>RFID-authorized switch</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 text-sm text-muted-foreground">
               <p>
-                The dashboard writes the bulb state to the backend. The ESP32
-                polls that state and drives the physical bulb pin.
+                The apps request the bulb. The backend waits for an RFID scan
+                before allowing the ESP32 to energize the output.
               </p>
               <div className="rounded-md border px-3 py-2 font-mono text-foreground">
-                POST /bulb {"{ enabled: true | false }"}
+                POST /bulb {"{ enabled: true }"} then POST /bulb/rfid-scan
               </div>
               <p>
-                Use the buttons here or the mobile app to switch the bulb on and
-                off.
+                Off commands still work from the apps so the lab can be reset
+                quickly.
               </p>
             </CardContent>
           </Card>

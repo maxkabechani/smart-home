@@ -1,5 +1,11 @@
 export type BulbState = {
   enabled: boolean;
+  pendingRfid: boolean;
+  requestedAt: string | null;
+  authorizedAt: string | null;
+  lastRfidUid: string | null;
+  lastRfidStatus: "authorized" | "denied" | "ignored" | null;
+  lastRfidAt: string | null;
   updatedAt: string;
 };
 

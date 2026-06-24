@@ -61,6 +61,7 @@ export default function Page() {
           historyCount={history.length}
           isLoading={latestQuery.isLoading || historyQuery.isLoading}
           bulbEnabled={bulbQuery.data?.data.enabled ?? false}
+          bulbPendingRfid={bulbQuery.data?.data.pendingRfid ?? false}
         />
 
         <div className="px-4 lg:px-6">
@@ -84,7 +85,13 @@ export default function Page() {
             icon={<LightbulbIcon className="size-4" />}
             label="Lab Exercise 2"
             title="Bulb Output"
-            value={`Physical bulb is ${bulbQuery.data?.data.enabled ? "on" : "off"}`}
+            value={
+              bulbQuery.data?.data.enabled
+                ? "Physical bulb is on"
+                : bulbQuery.data?.data.pendingRfid
+                  ? "Waiting for RFID scan"
+                  : "Physical bulb is off"
+            }
           />
         </div>
       </div>
