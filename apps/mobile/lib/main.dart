@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 const String apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
@@ -292,18 +293,70 @@ class _MonitorHomePageState extends State<MonitorHomePage> {
   bool _isFetching = false;
   DateTime? _lastSyncedAt;
   Timer? _pollTimer;
+  Timer? _bulbSocketReconnectTimer;
+  StreamSubscription<dynamic>? _bulbSocketSubscription;
+  WebSocketChannel? _bulbSocket;
 
   @override
   void initState() {
     super.initState();
     _refresh(showLoading: true);
+    _connectBulbSocket();
     _pollTimer = Timer.periodic(pollInterval, (_) => _refresh());
   }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _bulbSocketReconnectTimer?.cancel();
+    _bulbSocketSubscription?.cancel();
+    _bulbSocket?.sink.close();
     super.dispose();
+  }
+
+  void _connectBulbSocket() {
+    _bulbSocketReconnectTimer?.cancel();
+    _bulbSocketSubscription?.cancel();
+    _bulbSocket?.sink.close();
+
+    final socket = WebSocketChannel.connect(_buildBulbSocketUri());
+    _bulbSocket = socket;
+
+    _bulbSocketSubscription = socket.stream.listen(
+      _handleBulbSocketMessage,
+      onError: (_) => _scheduleBulbSocketReconnect(),
+      onDone: _scheduleBulbSocketReconnect,
+      cancelOnError: true,
+    );
+  }
+
+  void _scheduleBulbSocketReconnect() {
+    _bulbSocketReconnectTimer?.cancel();
+    _bulbSocketReconnectTimer = Timer(
+      const Duration(seconds: 2),
+      _connectBulbSocket,
+    );
+  }
+
+  void _handleBulbSocketMessage(dynamic message) {
+    try {
+      final payload = jsonDecode(message as String) as Map<String, dynamic>;
+      if (payload['type'] != 'bulb.state') {
+        return;
+      }
+
+      final bulb = BulbState.fromJson(payload['data'] as Map<String, dynamic>);
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _bulb = bulb;
+        _lastSyncedAt = DateTime.now();
+      });
+    } catch (_) {
+      // Ignore malformed realtime messages and let polling remain the fallback.
+    }
   }
 
   Future<void> _refresh({
@@ -1993,6 +2046,13 @@ DateTime? _parseOptionalDate(Object? value) {
   }
 
   return DateTime.tryParse(value);
+}
+
+Uri _buildBulbSocketUri() {
+  final apiUri = Uri.parse(apiBaseUrl);
+  final scheme = apiUri.scheme == 'https' ? 'wss' : 'ws';
+
+  return apiUri.replace(scheme: scheme, path: '/bulb/ws', query: '');
 }
 
 String _formatBulbStateLabel(BulbState? bulb) {

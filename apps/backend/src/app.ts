@@ -1,4 +1,5 @@
 import cors from "@fastify/cors";
+import websocket from "@fastify/websocket";
 import type { FastifyError } from "fastify";
 import fastify from "fastify";
 import { initializeDatabase } from "./db/client.js";
@@ -28,6 +29,7 @@ export async function buildApp() {
   app.register(cors, {
     origin: true,
   });
+  app.register(websocket);
 
   app.setErrorHandler((error: FastifyError, _request, reply) => {
     if (error.validation) {

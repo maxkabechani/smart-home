@@ -6,6 +6,10 @@ import {
   switchBulbOff,
 } from "../db/bulb.repository.js";
 import {
+  addBulbClient,
+  broadcastBulbState,
+} from "../realtime/bulb-events.js";
+import {
   bulbInputSchema,
   bulbResponseSchema,
   rfidScanInputSchema,
@@ -27,6 +31,14 @@ function getAllowedRfidUids() {
 }
 
 const bulbRoutes: FastifyPluginAsync = async (app) => {
+  app.get(
+    "/bulb/ws",
+    { websocket: true },
+    async (socket) => {
+      addBulbClient(socket, await getBulbState());
+    },
+  );
+
   app.get(
     "/bulb",
     {
@@ -55,11 +67,14 @@ const bulbRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     async (request) => {
+      const state = request.body.enabled
+        ? await requestBulbOn()
+        : await switchBulbOff();
+      broadcastBulbState(state);
+
       return {
         success: true,
-        data: request.body.enabled
-          ? await requestBulbOn()
-          : await switchBulbOff(),
+        data: state,
       };
     },
   );
@@ -79,6 +94,7 @@ const bulbRoutes: FastifyPluginAsync = async (app) => {
       const allowedUids = getAllowedRfidUids();
       const isAllowed = allowedUids.size === 0 || allowedUids.has(uid);
       const bulbState = await recordRfidScan(uid, isAllowed);
+      broadcastBulbState(bulbState);
 
       request.log.info(
         {

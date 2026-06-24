@@ -1,6 +1,7 @@
 #include <HTTPClient.h>
 #include <SPI.h>
 #include <WiFi.h>
+#include <WebSocketsClient.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <MFRC522.h>
@@ -20,6 +21,11 @@ const char* WIFI_PASSWORD = "TheForce";
 // Use your computer LAN IP here when testing locally, for example:
 // const char* API_BASE_URL = "http://192.168.1.25:4000";
 const char* API_BASE_URL = "https://api.temp.maxkabechani.dev";
+const char* BULB_WS_HOST = "api.temp.maxkabechani.dev";
+const uint16_t BULB_WS_PORT = 443;
+const char* BULB_WS_PATH = "/bulb/ws";
+const bool BULB_WS_SSL = true;
+const char* ALLOWED_RFID_UID = "6E0AC201";
 
 const unsigned long READ_INTERVAL_MS = 5000;
 unsigned long lastReadAt = 0;
@@ -27,6 +33,8 @@ unsigned long lastReadAt = 0;
 DHT dht(DHTPIN, DHTTYPE);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 MFRC522 rfid(RFID_SS_PIN, RFID_RST_PIN);
+WebSocketsClient bulbSocket;
+bool bulbSocketStarted = false;
 
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) {
@@ -95,6 +103,15 @@ void postReading(float temperature, float humidity) {
   http.end();
 }
 
+void applyBulbPayload(const String& response) {
+  bool enabled = response.indexOf("\"enabled\":true") >= 0;
+  bool pendingRfid = response.indexOf("\"pendingRfid\":true") >= 0;
+  digitalWrite(BULB_PIN, enabled ? HIGH : LOW);
+
+  Serial.print("Bulb state: ");
+  Serial.println(enabled ? "on" : pendingRfid ? "waiting for RFID" : "off");
+}
+
 void syncBulbState() {
   HTTPClient http;
   String url = String(API_BASE_URL) + "/bulb";
@@ -109,20 +126,62 @@ void syncBulbState() {
   }
 
   String response = http.getString();
-  bool enabled = response.indexOf("\"enabled\":true") >= 0;
-  bool pendingRfid = response.indexOf("\"pendingRfid\":true") >= 0;
-  digitalWrite(BULB_PIN, enabled ? HIGH : LOW);
-
   Serial.print("GET /bulb response code: ");
   Serial.println(httpCode);
-  Serial.print("Bulb state: ");
-  Serial.println(enabled ? "on" : pendingRfid ? "waiting for RFID" : "off");
+  applyBulbPayload(response);
 
   http.end();
 }
 
-void flashAccessLed(bool authorized) {
-  const int pin = authorized ? GREEN_LED_PIN : RED_LED_PIN;
+void onBulbSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
+  switch (type) {
+    case WStype_CONNECTED:
+      Serial.println("Bulb websocket connected.");
+      break;
+    case WStype_DISCONNECTED:
+      Serial.println("Bulb websocket disconnected.");
+      break;
+    case WStype_TEXT: {
+      String message = "";
+      for (size_t i = 0; i < length; i++) {
+        message += (char)payload[i];
+      }
+      Serial.print("Bulb websocket message: ");
+      Serial.println(message);
+      applyBulbPayload(message);
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void ensureBulbWebSocket() {
+  if (bulbSocketStarted || WiFi.status() != WL_CONNECTED) {
+    return;
+  }
+
+  if (BULB_WS_SSL) {
+    bulbSocket.beginSSL(BULB_WS_HOST, BULB_WS_PORT, BULB_WS_PATH);
+  } else {
+    bulbSocket.begin(BULB_WS_HOST, BULB_WS_PORT, BULB_WS_PATH);
+  }
+
+  bulbSocket.onEvent(onBulbSocketEvent);
+  bulbSocket.setReconnectInterval(2000);
+  bulbSocketStarted = true;
+}
+
+bool isLocalRfidAllowed(const String& uid) {
+  String allowedUid = String(ALLOWED_RFID_UID);
+  allowedUid.replace(" ", "");
+  allowedUid.toUpperCase();
+
+  return allowedUid.length() == 0 || uid == allowedUid;
+}
+
+void flashAccessLed(bool allowed) {
+  const int pin = allowed ? GREEN_LED_PIN : RED_LED_PIN;
   digitalWrite(pin, HIGH);
   delay(3000);
   digitalWrite(pin, LOW);
@@ -163,17 +222,12 @@ void postRfidScan(const String& uid) {
 
   if (httpCode > 0) {
     String response = http.getString();
-    bool authorized = response.indexOf("\"lastRfidStatus\":\"authorized\"") >= 0;
-
     Serial.print("POST /bulb/rfid-scan response code: ");
     Serial.println(httpCode);
     Serial.println(response);
-
-    flashAccessLed(authorized);
   } else {
     Serial.print("POST /bulb/rfid-scan failed: ");
     Serial.println(http.errorToString(httpCode));
-    flashAccessLed(false);
   }
 
   http.end();
@@ -187,6 +241,7 @@ void checkRfidScan() {
 
   Serial.print("RFID UID: ");
   Serial.println(uid);
+  flashAccessLed(isLocalRfidAllowed(uid));
   postRfidScan(uid);
   syncBulbState();
 }
@@ -214,11 +269,14 @@ void setup() {
 
   dht.begin();
   connectWiFi();
+  ensureBulbWebSocket();
 }
 
 void loop() {
   const unsigned long now = millis();
   if (WiFi.status() == WL_CONNECTED) {
+    ensureBulbWebSocket();
+    bulbSocket.loop();
     checkRfidScan();
   }
 
