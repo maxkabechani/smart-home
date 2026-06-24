@@ -7,6 +7,8 @@ import { buildBulbUrl, buildBulbWsUrl, type BulbResponse } from "./api";
 
 const pollIntervalMs = 5000;
 
+export let sharedBulbSocket: WebSocket | null = null;
+
 async function fetchBulbState(): Promise<BulbResponse> {
   const response = await fetch(buildBulbUrl(), {
     cache: "no-store",
@@ -23,19 +25,21 @@ export function useBulbStateQuery() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    let socket: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let closed = false;
 
     const connect = () => {
-      socket = new WebSocket(buildBulbWsUrl());
+      sharedBulbSocket = new WebSocket(buildBulbWsUrl());
 
-      socket.addEventListener("message", (event) => {
+      sharedBulbSocket.addEventListener("message", (event) => {
         const payload = JSON.parse(event.data) as
-          | { type: "bulb.state"; data: BulbResponse["data"] }
+          | {
+              type: "bulb.state" | "rfid.scan";
+              data: BulbResponse["data"];
+            }
           | undefined;
 
-        if (payload?.type === "bulb.state") {
+        if (payload?.type === "bulb.state" || payload?.type === "rfid.scan") {
           queryClient.setQueryData<BulbResponse>(queryKeys.bulb.state(), {
             success: true,
             data: payload.data,
@@ -43,7 +47,7 @@ export function useBulbStateQuery() {
         }
       });
 
-      socket.addEventListener("close", () => {
+      sharedBulbSocket.addEventListener("close", () => {
         if (!closed) {
           reconnectTimer = setTimeout(connect, 2000);
         }
@@ -57,7 +61,8 @@ export function useBulbStateQuery() {
       if (reconnectTimer) {
         clearTimeout(reconnectTimer);
       }
-      socket?.close();
+      sharedBulbSocket?.close();
+      sharedBulbSocket = null;
     };
   }, [queryClient]);
 

@@ -9,16 +9,16 @@ type BulbSocket = {
 const openReadyState = 1;
 const clients = new Set<BulbSocket>();
 
-function serializeBulbState(state: BulbState) {
+function serializeRealtimeMessage(type: "bulb.state" | "rfid.scan", state: BulbState) {
   return JSON.stringify({
-    type: "bulb.state",
+    type,
     data: state,
   });
 }
 
 export function addBulbClient(socket: BulbSocket, initialState: BulbState) {
   clients.add(socket);
-  socket.send(serializeBulbState(initialState));
+  socket.send(serializeRealtimeMessage("bulb.state", initialState));
 
   const removeClient = () => clients.delete(socket);
   socket.on("close", removeClient);
@@ -26,7 +26,14 @@ export function addBulbClient(socket: BulbSocket, initialState: BulbState) {
 }
 
 export function broadcastBulbState(state: BulbState) {
-  const message = serializeBulbState(state);
+  broadcastRealtimeMessage(serializeRealtimeMessage("bulb.state", state));
+}
+
+export function broadcastRfidScan(state: BulbState) {
+  broadcastRealtimeMessage(serializeRealtimeMessage("rfid.scan", state));
+}
+
+function broadcastRealtimeMessage(message: string) {
 
   for (const client of clients) {
     if (client.readyState === openReadyState) {

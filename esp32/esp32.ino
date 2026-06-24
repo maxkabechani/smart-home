@@ -35,6 +35,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 MFRC522 rfid(RFID_SS_PIN, RFID_RST_PIN);
 WebSocketsClient bulbSocket;
 bool bulbSocketStarted = false;
+bool isBulbPendingRfid = false;
 
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) {
@@ -105,11 +106,11 @@ void postReading(float temperature, float humidity) {
 
 void applyBulbPayload(const String& response) {
   bool enabled = response.indexOf("\"enabled\":true") >= 0;
-  bool pendingRfid = response.indexOf("\"pendingRfid\":true") >= 0;
+  isBulbPendingRfid = response.indexOf("\"pendingRfid\":true") >= 0;
   digitalWrite(BULB_PIN, enabled ? HIGH : LOW);
 
   Serial.print("Bulb state: ");
-  Serial.println(enabled ? "on" : pendingRfid ? "waiting for RFID" : "off");
+  Serial.println(enabled ? "on" : isBulbPendingRfid ? "waiting for RFID" : "off");
 }
 
 void syncBulbState() {
@@ -241,9 +242,16 @@ void checkRfidScan() {
 
   Serial.print("RFID UID: ");
   Serial.println(uid);
-  flashAccessLed(isLocalRfidAllowed(uid));
+  
+  bool allowed = isLocalRfidAllowed(uid);
+  flashAccessLed(allowed);
+
+  if (allowed && isBulbPendingRfid) {
+    digitalWrite(BULB_PIN, HIGH);
+    isBulbPendingRfid = false;
+  }
+
   postRfidScan(uid);
-  syncBulbState();
 }
 
 void setup() {
@@ -314,5 +322,4 @@ void loop() {
   }
 
   postReading(temperature, humidity);
-  syncBulbState();
 }

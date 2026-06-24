@@ -8,6 +8,7 @@ import {
 import {
   addBulbClient,
   broadcastBulbState,
+  broadcastRfidScan,
 } from "../realtime/bulb-events.js";
 import {
   bulbInputSchema,
@@ -34,8 +35,22 @@ const bulbRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     "/bulb/ws",
     { websocket: true },
-    async (socket) => {
+    async (socket, request) => {
       addBulbClient(socket, await getBulbState());
+
+      socket.on("message", async (message: Buffer) => {
+        try {
+          const payload = JSON.parse(message.toString());
+          if (payload.type === "bulb.request" && payload.data && typeof payload.data.enabled === "boolean") {
+            const state = payload.data.enabled
+              ? await requestBulbOn()
+              : await switchBulbOff();
+            broadcastBulbState(state);
+          }
+        } catch (e) {
+          request.log.error(e, "Failed to process websocket message");
+        }
+      });
     },
   );
 
@@ -95,6 +110,7 @@ const bulbRoutes: FastifyPluginAsync = async (app) => {
       const isAllowed = allowedUids.size === 0 || allowedUids.has(uid);
       const bulbState = await recordRfidScan(uid, isAllowed);
       broadcastBulbState(bulbState);
+      broadcastRfidScan(bulbState);
 
       request.log.info(
         {

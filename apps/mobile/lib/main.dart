@@ -341,7 +341,7 @@ class _MonitorHomePageState extends State<MonitorHomePage> {
   void _handleBulbSocketMessage(dynamic message) {
     try {
       final payload = jsonDecode(message as String) as Map<String, dynamic>;
-      if (payload['type'] != 'bulb.state') {
+      if (payload['type'] != 'bulb.state' && payload['type'] != 'rfid.scan') {
         return;
       }
 
@@ -429,16 +429,28 @@ class _MonitorHomePageState extends State<MonitorHomePage> {
     setState(() => _isUpdatingBulb = true);
 
     try {
-      final bulb = await _api.setBulbState(enabled);
+      if (_bulbSocket != null) {
+        _bulbSocket!.sink.add(jsonEncode({
+          'type': 'bulb.request',
+          'data': {'enabled': enabled}
+        }));
+        if (mounted) {
+          setState(() {
+            _errorMessage = null;
+          });
+        }
+      } else {
+        final bulb = await _api.setBulbState(enabled);
 
-      if (!mounted) {
-        return;
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _bulb = bulb;
+          _errorMessage = null;
+        });
       }
-
-      setState(() {
-        _bulb = bulb;
-        _errorMessage = null;
-      });
     } catch (_) {
       if (!mounted) {
         return;
