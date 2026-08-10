@@ -50,5 +50,4 @@ INSERT OR IGNORE INTO bulb_state (id, enabled)
   VALUES (1, 0);
 `;
 
-export const bulbStateMigrationSql = [
-];
+export const bulbStateMigrationSql: string[] = [];
