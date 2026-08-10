@@ -34,12 +34,12 @@ export function useBulbStateQuery() {
       sharedBulbSocket.addEventListener("message", (event) => {
         const payload = JSON.parse(event.data) as
           | {
-              type: "bulb.state" | "rfid.scan";
+              type: "bulb.state";
               data: BulbResponse["data"];
             }
           | undefined;
 
-        if (payload?.type === "bulb.state" || payload?.type === "rfid.scan") {
+        if (payload?.type === "bulb.state") {
           queryClient.setQueryData<BulbResponse>(queryKeys.bulb.state(), {
             success: true,
             data: payload.data,
