@@ -12,21 +12,14 @@ import {
 } from "@/components/ui/card"
 import { useSetBulbStateMutation } from "@/features/bulb/mutations"
 import { useBulbStateQuery } from "@/features/bulb/queries"
-import { IdCardIcon, LightbulbIcon, ServerIcon } from "lucide-react"
+import { LightbulbIcon, ServerIcon } from "lucide-react"
 
 export default function LabTwoPage() {
   const bulbQuery = useBulbStateQuery()
   const setBulbMutation = useSetBulbStateMutation()
   const isBulbOn = bulbQuery.data?.data.enabled ?? false
-  const isWaitingForRfid = bulbQuery.data?.data.pendingRfid ?? false
-  const lastRfidUid = bulbQuery.data?.data.lastRfidUid
-  const lastRfidStatus = bulbQuery.data?.data.lastRfidStatus
   const updatedAt = bulbQuery.data?.data.updatedAt
-  const stateLabel = isBulbOn
-    ? "Bulb on"
-    : isWaitingForRfid
-      ? "Waiting for RFID"
-      : "Bulb off"
+  const stateLabel = isBulbOn ? "Bulb on" : "Bulb off"
 
   return (
     <LabShell>
@@ -59,8 +52,6 @@ export default function LabTwoPage() {
                   "flex size-28 shrink-0 items-center justify-center rounded-full border",
                   isBulbOn
                     ? "border-amber-300 bg-amber-200 text-amber-950 shadow-[0_0_44px_rgba(251,191,36,0.55)]"
-                    : isWaitingForRfid
-                      ? "border-foreground bg-muted text-foreground"
                     : "border-muted bg-muted text-muted-foreground",
                 ].join(" ")}
               >
@@ -69,18 +60,13 @@ export default function LabTwoPage() {
               <div className="grid flex-1 gap-3">
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    disabled={
-                      setBulbMutation.isPending || isBulbOn || isWaitingForRfid
-                    }
+                    disabled={setBulbMutation.isPending || isBulbOn}
                     onClick={() => setBulbMutation.mutate(true)}
                   >
-                    Request On
+                    Switch On
                   </Button>
                   <Button
-                    disabled={
-                      setBulbMutation.isPending ||
-                      (!isBulbOn && !isWaitingForRfid)
-                    }
+                    disabled={setBulbMutation.isPending || !isBulbOn}
                     onClick={() => setBulbMutation.mutate(false)}
                     variant="outline"
                   >
@@ -90,18 +76,7 @@ export default function LabTwoPage() {
                 <StatusLine
                   icon={<LightbulbIcon className="size-4" />}
                   label="Current state"
-                  value={
-                    isBulbOn ? "on" : isWaitingForRfid ? "waiting" : "off"
-                  }
-                />
-                <StatusLine
-                  icon={<IdCardIcon className="size-4" />}
-                  label="RFID scan"
-                  value={
-                    lastRfidUid
-                      ? `${lastRfidStatus ?? "seen"} ${lastRfidUid}`
-                      : "none"
-                  }
+                  value={isBulbOn ? "on" : "off"}
                 />
                 <StatusLine
                   icon={<ServerIcon className="size-4" />}
@@ -115,20 +90,16 @@ export default function LabTwoPage() {
           <Card>
             <CardHeader>
               <CardDescription>Lab control</CardDescription>
-              <CardTitle>RFID-authorized switch</CardTitle>
+              <CardTitle>Direct switch control</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 text-sm text-muted-foreground">
               <p>
-                The apps request the bulb. The backend waits for an RFID scan
-                before allowing the ESP32 to energize the output.
+                The apps can directly switch the bulb through the backend.
               </p>
               <div className="rounded-md border px-3 py-2 font-mono text-foreground">
-                POST /bulb {"{ enabled: true }"} then POST /bulb/rfid-scan
+                POST /bulb {"{ enabled: true | false }"}
               </div>
-              <p>
-                Off commands still work from the apps so the lab can be reset
-                quickly.
-              </p>
+              <p>State updates stream over /bulb/ws for fast UI refresh.</p>
             </CardContent>
           </Card>
         </div>

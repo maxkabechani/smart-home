@@ -183,33 +183,15 @@ class Reading {
 class BulbState {
   BulbState({
     required this.enabled,
-    required this.pendingRfid,
-    required this.requestedAt,
-    required this.authorizedAt,
-    required this.lastRfidUid,
-    required this.lastRfidStatus,
-    required this.lastRfidAt,
     required this.updatedAt,
   });
 
   final bool enabled;
-  final bool pendingRfid;
-  final DateTime? requestedAt;
-  final DateTime? authorizedAt;
-  final String? lastRfidUid;
-  final String? lastRfidStatus;
-  final DateTime? lastRfidAt;
   final DateTime updatedAt;
 
   factory BulbState.fromJson(Map<String, dynamic> json) {
     return BulbState(
       enabled: json['enabled'] == true,
-      pendingRfid: json['pendingRfid'] == true,
-      requestedAt: _parseOptionalDate(json['requestedAt']),
-      authorizedAt: _parseOptionalDate(json['authorizedAt']),
-      lastRfidUid: json['lastRfidUid'] as String?,
-      lastRfidStatus: json['lastRfidStatus'] as String?,
-      lastRfidAt: _parseOptionalDate(json['lastRfidAt']),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
   }
@@ -341,7 +323,7 @@ class _MonitorHomePageState extends State<MonitorHomePage> {
   void _handleBulbSocketMessage(dynamic message) {
     try {
       final payload = jsonDecode(message as String) as Map<String, dynamic>;
-      if (payload['type'] != 'bulb.state' && payload['type'] != 'rfid.scan') {
+      if (payload['type'] != 'bulb.state') {
         return;
       }
 
@@ -814,7 +796,6 @@ class _LabTwoView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = bulb?.enabled ?? false;
-    final pendingRfid = bulb?.pendingRfid ?? false;
 
     return Column(
       key: const ValueKey('lab-two'),
@@ -822,18 +803,13 @@ class _LabTwoView extends StatelessWidget {
       children: [
         _SectionHeader(
           eyebrow: 'Lab Exercise 2',
-          title: 'RFID bulb control',
-          description:
-              'Request the light here, then scan RFID at the ESP32 to turn it on.',
+          title: 'Bulb control',
+          description: 'Switch the light directly from the app.',
         ),
         const SizedBox(height: 16),
         _BulbControlCard(
           enabled: enabled,
-          pendingRfid: pendingRfid,
           updatedAt: bulb?.updatedAt,
-          lastRfidUid: bulb?.lastRfidUid,
-          lastRfidStatus: bulb?.lastRfidStatus,
-          lastRfidAt: bulb?.lastRfidAt,
           isUpdating: isUpdating,
           onSetBulbState: onSetBulbState,
         ),
@@ -850,19 +826,18 @@ class _LabTwoView extends StatelessWidget {
               _InfoRow(
                 label: 'API routes',
                 value:
-                    'The app reads GET /bulb, requests ON with POST /bulb, and RFID scans POST /bulb/rfid-scan.',
+                    'The app reads GET /bulb and switches output with POST /bulb.',
               ),
               SizedBox(height: 14),
               _InfoRow(
                 label: 'ESP32 behavior',
                 value:
-                    'The board sends RFID scans and only energizes the output after backend authorization.',
+                    'The board applies backend bulb state and updates quickly through /bulb/ws.',
               ),
               SizedBox(height: 14),
               _InfoRow(
                 label: 'UX intent',
-                value:
-                    'Off stays available from the apps so the lab can be reset quickly.',
+                value: 'Keep bulb controls simple and responsive in class demos.',
               ),
             ],
           ),
@@ -1068,9 +1043,7 @@ class _MetricGrid extends StatelessWidget {
           icon: Icons.lightbulb_rounded,
           accent: _amber,
           title: 'Bulb state',
-          value: bulb == null
-              ? '--'
-              : (bulb!.enabled ? 'On' : (bulb!.pendingRfid ? 'RFID' : 'Off')),
+          value: bulb == null ? '--' : (bulb!.enabled ? 'On' : 'Off'),
           unit: '',
           helper: '$historyCount telemetry points in this range',
           trend: bulb?.updatedAt != null
@@ -1239,8 +1212,6 @@ class _SystemPulse extends StatelessWidget {
           label: 'Bulb control',
           value: bulb?.enabled == true
               ? 'Physical bulb should currently be on'
-              : bulb?.pendingRfid == true
-              ? 'Waiting for RFID scan'
               : 'Physical bulb is currently off',
         ),
         const SizedBox(height: 14),
@@ -1556,32 +1527,20 @@ class _ReadingsLineChart extends StatelessWidget {
 class _BulbControlCard extends StatelessWidget {
   const _BulbControlCard({
     required this.enabled,
-    required this.pendingRfid,
     required this.updatedAt,
-    required this.lastRfidUid,
-    required this.lastRfidStatus,
-    required this.lastRfidAt,
     required this.isUpdating,
     required this.onSetBulbState,
   });
 
   final bool enabled;
-  final bool pendingRfid;
   final DateTime? updatedAt;
-  final String? lastRfidUid;
-  final String? lastRfidStatus;
-  final DateTime? lastRfidAt;
   final bool isUpdating;
   final ValueChanged<bool> onSetBulbState;
 
   @override
   Widget build(BuildContext context) {
-    final accent = enabled || pendingRfid ? _amber : _textSecondary;
-    final title = enabled
-        ? 'Bulb is on'
-        : pendingRfid
-        ? 'Scan RFID'
-        : 'Bulb is off';
+    final accent = enabled ? _amber : _textSecondary;
+    final title = enabled ? 'Bulb is on' : 'Bulb is off';
     final helper = updatedAt != null
         ? 'Last command ${_formatRelativeTime(updatedAt)}'
         : 'Waiting for the first backend state.';
@@ -1606,7 +1565,7 @@ class _BulbControlCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: accent.withValues(
-                      alpha: enabled || pendingRfid ? 0.22 : 0.12,
+                      alpha: enabled ? 0.22 : 0.12,
                     ),
                     boxShadow: enabled
                         ? [
@@ -1651,9 +1610,7 @@ class _BulbControlCard extends StatelessWidget {
             Text(
               enabled
                   ? 'The output should currently be energizing the physical bulb.'
-                  : pendingRfid
-                  ? 'The backend is waiting for a valid RFID scan before turning the bulb on.'
-                  : 'Request the light here, then scan the RFID tag at the board.',
+                  : 'Use Switch On to energize the physical bulb.',
               style: const TextStyle(
                 color: _textSecondary,
                 fontSize: 14,
@@ -1661,19 +1618,11 @@ class _BulbControlCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            _InfoRow(
-              label: 'Last RFID',
-              value: lastRfidUid == null
-                  ? 'No scan yet'
-                  : '${lastRfidStatus ?? 'seen'} $lastRfidUid'
-                      '${lastRfidAt == null ? '' : ' (${_formatRelativeTime(lastRfidAt)})'}',
-            ),
-            const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: isUpdating || enabled || pendingRfid
+                    onPressed: isUpdating || enabled
                         ? null
                         : () => onSetBulbState(true),
                     style: FilledButton.styleFrom(
@@ -1689,13 +1638,13 @@ class _BulbControlCard extends StatelessWidget {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.flash_on_rounded),
-                    label: const Text('Request On'),
+                    label: const Text('Switch On'),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: isUpdating || (!enabled && !pendingRfid)
+                    onPressed: isUpdating || !enabled
                         ? null
                         : () => onSetBulbState(false),
                     icon: isUpdating && enabled
@@ -2074,10 +2023,6 @@ String _formatBulbStateLabel(BulbState? bulb) {
 
   if (bulb.enabled) {
     return 'Bulb active';
-  }
-
-  if (bulb.pendingRfid) {
-    return 'Waiting for RFID';
   }
 
   return 'Bulb idle';

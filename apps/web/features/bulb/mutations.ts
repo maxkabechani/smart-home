@@ -12,12 +12,6 @@ async function setBulbState(enabled: boolean): Promise<BulbResponse> {
       success: true,
       data: {
         enabled,
-        pendingRfid: false,
-        requestedAt: new Date().toISOString(),
-        authorizedAt: null,
-        lastRfidUid: null,
-        lastRfidStatus: null,
-        lastRfidAt: null,
         updatedAt: new Date().toISOString(),
       },
     };

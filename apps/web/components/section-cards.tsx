@@ -23,7 +23,6 @@ type SectionCardsProps = {
   historyCount: number
   isLoading: boolean
   bulbEnabled: boolean
-  bulbPendingRfid: boolean
 }
 
 export function SectionCards({
@@ -31,7 +30,6 @@ export function SectionCards({
   historyCount,
   isLoading,
   bulbEnabled,
-  bulbPendingRfid,
 }: SectionCardsProps) {
   const isOnline = reading?.status === "online"
   const temperature = reading ? `${reading.temperature.toFixed(1)} C` : "--"
@@ -111,7 +109,7 @@ export function SectionCards({
         <CardHeader>
           <CardDescription>Bulb Output</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {bulbEnabled ? "On" : bulbPendingRfid ? "RFID" : "Off"}
+            {bulbEnabled ? "On" : "Off"}
           </CardTitle>
           <CardAction>
             <Badge variant={bulbEnabled ? "default" : "outline"}>
@@ -122,9 +120,7 @@ export function SectionCards({
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            {bulbPendingRfid
-              ? "Scan RFID to complete request"
-              : "Physical output controlled by backend"}
+            Physical output controlled by backend
           </div>
           <div className="text-muted-foreground">ESP32 polls /bulb</div>
         </CardFooter>

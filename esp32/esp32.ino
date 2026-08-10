@@ -1,19 +1,13 @@
 #include <HTTPClient.h>
-#include <SPI.h>
 #include <WiFi.h>
 #include <WebSocketsClient.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-#include <MFRC522.h>
 #include "DHT.h"
 
 #define DHTPIN 14
 #define DHTTYPE DHT11
 #define BULB_PIN 27
-#define RFID_SS_PIN 5
-#define RFID_RST_PIN 4
-#define GREEN_LED_PIN 26
-#define RED_LED_PIN 25
 
 const char* WIFI_SSID = "ODIN";
 const char* WIFI_PASSWORD = "TheForce";
@@ -25,17 +19,14 @@ const char* BULB_WS_HOST = "api.temp.maxkabechani.dev";
 const uint16_t BULB_WS_PORT = 443;
 const char* BULB_WS_PATH = "/bulb/ws";
 const bool BULB_WS_SSL = true;
-const char* ALLOWED_RFID_UID = "6E0AC201";
 
 const unsigned long READ_INTERVAL_MS = 5000;
 unsigned long lastReadAt = 0;
 
 DHT dht(DHTPIN, DHTTYPE);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
-MFRC522 rfid(RFID_SS_PIN, RFID_RST_PIN);
 WebSocketsClient bulbSocket;
 bool bulbSocketStarted = false;
-bool isBulbPendingRfid = false;
 
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) {
@@ -106,11 +97,10 @@ void postReading(float temperature, float humidity) {
 
 void applyBulbPayload(const String& response) {
   bool enabled = response.indexOf("\"enabled\":true") >= 0;
-  isBulbPendingRfid = response.indexOf("\"pendingRfid\":true") >= 0;
   digitalWrite(BULB_PIN, enabled ? HIGH : LOW);
 
   Serial.print("Bulb state: ");
-  Serial.println(enabled ? "on" : isBulbPendingRfid ? "waiting for RFID" : "off");
+  Serial.println(enabled ? "on" : "off");
 }
 
 void syncBulbState() {
@@ -173,99 +163,12 @@ void ensureBulbWebSocket() {
   bulbSocketStarted = true;
 }
 
-bool isLocalRfidAllowed(const String& uid) {
-  String allowedUid = String(ALLOWED_RFID_UID);
-  allowedUid.replace(" ", "");
-  allowedUid.toUpperCase();
-
-  return allowedUid.length() == 0 || uid == allowedUid;
-}
-
-void flashAccessLed(bool allowed) {
-  const int pin = allowed ? GREEN_LED_PIN : RED_LED_PIN;
-  digitalWrite(pin, HIGH);
-  delay(3000);
-  digitalWrite(pin, LOW);
-}
-
-String readRfidUid() {
-  if (!rfid.PICC_IsNewCardPresent() || !rfid.PICC_ReadCardSerial()) {
-    return "";
-  }
-
-  String uid = "";
-  for (byte i = 0; i < rfid.uid.size; i++) {
-    if (rfid.uid.uidByte[i] < 0x10) {
-      uid += "0";
-    }
-    uid += String(rfid.uid.uidByte[i], HEX);
-  }
-  uid.toUpperCase();
-
-  rfid.PICC_HaltA();
-  rfid.PCD_StopCrypto1();
-
-  return uid;
-}
-
-void postRfidScan(const String& uid) {
-  if (uid.length() == 0 || WiFi.status() != WL_CONNECTED) {
-    return;
-  }
-
-  HTTPClient http;
-  String url = String(API_BASE_URL) + "/bulb/rfid-scan";
-  http.begin(url);
-  http.addHeader("Content-Type", "application/json");
-
-  String payload = "{\"uid\":\"" + uid + "\"}";
-  int httpCode = http.POST(payload);
-
-  if (httpCode > 0) {
-    String response = http.getString();
-    Serial.print("POST /bulb/rfid-scan response code: ");
-    Serial.println(httpCode);
-    Serial.println(response);
-  } else {
-    Serial.print("POST /bulb/rfid-scan failed: ");
-    Serial.println(http.errorToString(httpCode));
-  }
-
-  http.end();
-}
-
-void checkRfidScan() {
-  String uid = readRfidUid();
-  if (uid.length() == 0) {
-    return;
-  }
-
-  Serial.print("RFID UID: ");
-  Serial.println(uid);
-  
-  bool allowed = isLocalRfidAllowed(uid);
-  flashAccessLed(allowed);
-
-  if (allowed && isBulbPendingRfid) {
-    digitalWrite(BULB_PIN, HIGH);
-    isBulbPendingRfid = false;
-  }
-
-  postRfidScan(uid);
-}
-
 void setup() {
   Serial.begin(115200);
-  Serial.println("ESP32 temperature, humidity, LCD, bulb, and RFID control");
+  Serial.println("ESP32 temperature, humidity, LCD, and bulb control");
 
   pinMode(BULB_PIN, OUTPUT);
-  pinMode(GREEN_LED_PIN, OUTPUT);
-  pinMode(RED_LED_PIN, OUTPUT);
   digitalWrite(BULB_PIN, LOW);
-  digitalWrite(GREEN_LED_PIN, LOW);
-  digitalWrite(RED_LED_PIN, LOW);
-  SPI.begin();
-  rfid.PCD_Init();
 
   lcd.init();
   lcd.backlight();
@@ -285,7 +188,6 @@ void loop() {
   if (WiFi.status() == WL_CONNECTED) {
     ensureBulbWebSocket();
     bulbSocket.loop();
-    checkRfidScan();
   }
 
   if (now - lastReadAt < READ_INTERVAL_MS) {

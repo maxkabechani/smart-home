@@ -12,14 +12,6 @@ CREATE INDEX IF NOT EXISTS sensor_readings_created_at_idx
 CREATE TABLE IF NOT EXISTS bulb_state (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
-  pending_rfid INTEGER NOT NULL DEFAULT 0 CHECK (pending_rfid IN (0, 1)),
-  requested_at TEXT,
-  authorized_at TEXT,
-  last_rfid_uid TEXT,
-  last_rfid_status TEXT CHECK (
-    last_rfid_status IS NULL OR last_rfid_status IN ('authorized', 'denied', 'ignored')
-  ),
-  last_rfid_at TEXT,
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 

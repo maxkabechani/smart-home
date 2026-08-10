@@ -9,7 +9,7 @@ type BulbSocket = {
 const openReadyState = 1;
 const clients = new Set<BulbSocket>();
 
-function serializeRealtimeMessage(type: "bulb.state" | "rfid.scan", state: BulbState) {
+function serializeRealtimeMessage(type: "bulb.state", state: BulbState) {
   return JSON.stringify({
     type,
     data: state,
@@ -27,10 +27,6 @@ export function addBulbClient(socket: BulbSocket, initialState: BulbState) {
 
 export function broadcastBulbState(state: BulbState) {
   broadcastRealtimeMessage(serializeRealtimeMessage("bulb.state", state));
-}
-
-export function broadcastRfidScan(state: BulbState) {
-  broadcastRealtimeMessage(serializeRealtimeMessage("rfid.scan", state));
 }
 
 function broadcastRealtimeMessage(message: string) {
