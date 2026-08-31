@@ -16,8 +16,6 @@ import {
 import {
   CommandIcon,
   LayoutDashboardIcon,
-  LightbulbIcon,
-  ThermometerIcon,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -28,22 +26,6 @@ const data = {
       url: "/dashboard",
       icon: (
         <LayoutDashboardIcon
-        />
-      ),
-    },
-    {
-      title: "Lab Exercise 1",
-      url: "/labs/1",
-      icon: (
-        <ThermometerIcon
-        />
-      ),
-    },
-    {
-      title: "Lab Exercise 2",
-      url: "/labs/2",
-      icon: (
-        <LightbulbIcon
         />
       ),
     },
@@ -64,7 +46,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <Link href="/dashboard" onClick={() => setOpenMobile(false)}>
                 <CommandIcon className="size-5!" />
-                <span className="text-base font-semibold">ESP32 Monitor</span>
+                <span className="text-base font-semibold">Smart Home</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
