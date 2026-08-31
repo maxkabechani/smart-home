@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import type { CSSProperties, ReactNode } from "react"
 
-export function LabShell({ children }: { children: ReactNode }) {
+export function SmartHomeShell({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider
       style={

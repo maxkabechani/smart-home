@@ -3,8 +3,7 @@ import websocket from "@fastify/websocket";
 import type { FastifyError } from "fastify";
 import fastify from "fastify";
 import { initializeDatabase } from "./db/client.js";
-import bulbRoutes from "./routes/bulb.routes.js";
-import readingsRoutes from "./routes/readings.routes.js";
+import smartHomeRoutes from "./routes/smart-home.routes.js";
 
 export async function buildApp() {
   await initializeDatabase();
@@ -48,12 +47,11 @@ export async function buildApp() {
   app.get("/health", async () => {
     return {
       status: "ok",
-      message: "Temperature and humidity API is running",
+      message: "Smart Home API is running",
     };
   });
 
-  app.register(readingsRoutes);
-  app.register(bulbRoutes);
+  app.register(smartHomeRoutes);
 
   return app;
 }

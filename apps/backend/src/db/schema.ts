@@ -1,53 +1,38 @@
-import { sql } from "drizzle-orm";
-import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-export const sensorReadings = sqliteTable(
-  "sensor_readings",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    temperature: real("temperature").notNull(),
-    humidity: real("humidity").notNull(),
-    status: text("status", { enum: ["online"] }).notNull().default("online"),
-    createdAt: text("created_at")
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
-  },
-  (table) => [index("sensor_readings_created_at_idx").on(table.createdAt)],
-);
-
-export type SensorReadingRow = typeof sensorReadings.$inferSelect;
-export type NewSensorReadingRow = typeof sensorReadings.$inferInsert;
-
-export const bulbState = sqliteTable("bulb_state", {
-  id: integer("id").primaryKey(),
-  enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+export const deviceTelemetry = sqliteTable("device_telemetry", {
+  deviceId: text("device_id").primaryKey(),
+  payload: text("payload").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
-export type BulbStateRow = typeof bulbState.$inferSelect;
+export const deviceCommands = sqliteTable(
+  "device_commands",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    deviceId: text("device_id").notNull(),
+    command: text("command").notNull(),
+    createdAt: text("created_at").notNull(),
+    deliveredAt: text("delivered_at"),
+  },
+  (table) => [index("device_commands_pending_idx").on(table.deviceId, table.deliveredAt, table.id)],
+);
 
-export const createReadingsTableSql = `
-CREATE TABLE IF NOT EXISTS sensor_readings (
+export const createSmartHomeTablesSql = `
+CREATE TABLE IF NOT EXISTS device_telemetry (
+  device_id TEXT PRIMARY KEY,
+  payload TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS device_commands (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  temperature REAL NOT NULL,
-  humidity REAL NOT NULL,
-  status TEXT NOT NULL DEFAULT 'online' CHECK (status IN ('online')),
-  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  device_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  delivered_at TEXT
 );
 
-CREATE INDEX IF NOT EXISTS sensor_readings_created_at_idx
-  ON sensor_readings (created_at DESC);
-
-CREATE TABLE IF NOT EXISTS bulb_state (
-  id INTEGER PRIMARY KEY CHECK (id = 1),
-  enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
-  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-);
-
-INSERT OR IGNORE INTO bulb_state (id, enabled)
-  VALUES (1, 0);
+CREATE INDEX IF NOT EXISTS device_commands_pending_idx
+  ON device_commands (device_id, delivered_at, id);
 `;
-
-export const bulbStateMigrationSql: string[] = [];
